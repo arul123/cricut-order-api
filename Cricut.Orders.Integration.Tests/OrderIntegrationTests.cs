@@ -1,6 +1,7 @@
 ﻿using AutoBogus;
 using Cricut.Orders.Api.ViewModels;
 using FluentAssertions;
+using System.Net;
 using System.Net.Http.Json;
 
 namespace Cricut.Orders.Integration.Tests
@@ -38,6 +39,33 @@ namespace Cricut.Orders.Integration.Tests
             {
                 order!.Total.Should().Be(expectedTotal);
             }
+        }
+
+        [TestMethod]
+        public async Task GetOrdersForCustomer_Returns_Orders_For_Known_Customer()
+        {
+            var client = OrdersApiTestClientFactory.CreateTestClient();
+
+            var response = await client.GetAsync("v1/orders/customer/12345");
+            response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+            var orders = await response.Content.ReadFromJsonAsync<OrderViewModel[]>();
+            orders.Should().NotBeNull();
+            orders!.Length.Should().Be(5);
+            orders.Should().AllSatisfy(o => o.Customer.Id.Should().Be(12345));
+        }
+
+        [TestMethod]
+        public async Task GetOrdersForCustomer_Returns_Empty_For_Unknown_Customer()
+        {
+            var client = OrdersApiTestClientFactory.CreateTestClient();
+
+            var response = await client.GetAsync("v1/orders/customer/99999");
+            response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+            var orders = await response.Content.ReadFromJsonAsync<OrderViewModel[]>();
+            orders.Should().NotBeNull();
+            orders!.Should().BeEmpty();
         }
 
         private NewOrderViewModel CreateOrderWithItems(int numberOfLineItems, int quantityOfEachItem, double priceOfEachItem)
